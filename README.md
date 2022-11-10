@@ -5,6 +5,7 @@ since students forget the beginning of a sentence before they get to the end (Ca
 Chunking is the grouping of words in a sentence into short meaningful phrases (R.4)
 Chunking is a procedure of breaking up reading material into manageable sections
 
+## Research
 
 ### tips:
 1. short meaningful phrases usually three to five words (R.4)
@@ -42,7 +43,7 @@ Chunking is a procedure of breaking up reading material into manageable sections
 | 9      |  4.Sentence  | SentCompleted   | +     | contain experts POS suit         | 
 | 10     |  4.Sentence  | SentLength      | +     | vaildate with length of sentencs | 
 
-### Reference
+## Reference
 
 1. [The influence of chunking on reading comprehension: Investigating the acquisition of chunking skill](https://www.researchgate.net/publication/289208481_The_influence_of_chunking_on_reading_comprehension_Investigating_the_acquisition_of_chunking_skill)
 2. [THE EFFECTIVENESS OF USING CHUNKING STRATEGY TO IMPROVE STUDENTS’ READING COMPREHENSION AT THE SECOND YEAR OF SMP NEGERI 2 BAROMBONG](https://www.researchgate.net/publication/323395900_THE_EFFECTIVENESS_OF_USING_CHUNKING_STRATEGY_TO_IMPROVE_STUDENTS'_READING_COMPREHENSION_AT_THE_SECOND_YEAR_OF_SMP_NEGERI_2_BAROMBONG)
@@ -102,8 +103,9 @@ Chunking is a procedure of breaking up reading material into manageable sections
 |     | SHI       | 是                 | 是                           |
 |     | FW        | 外文               | EMO                          |
 
-### Code Design
+## System Design
 
+### Variable
 ``` python
 class Weights(TypedDict):
 	Keyword: float,
@@ -120,39 +122,46 @@ class Weights(TypedDict):
 
 class Env(TypedDict):
 	weights: Weights
-	
-	
-KeywordsList = NewType("KeywordsList", Dict[str, int])
 
+Sentence = NewType("Sentence", str)
+KeywordsList = NewType("KeywordsList", Dict[str, int])
+POS   = NewType("POS", str)
+POSList = NewType("POSList", Set[POS])
+POSHeadTailList = NewType("POSHeadTailList", Set[POS])
+POSConnectSuitList = NewType("POSConnectSuitList", List[tuple[POS,POS]])
+ChunkPos = NewType("ChunkPos", List[POS]) 
+POSExpertSuit = NewType("POSExpertSuit", Set[POS,POS])
+POSExpertSuitPoint = NewType("POSExpertSuitPoint", int)
+POSExpertSuitList = NewType("POSExpertSuitList", List[tuple[POSExpertSuit,POSExpertSuitPoint]])
+
+```
+### Validate
+```python
 def pullKeywordsList() => KeywordsList:
 	pass
 
 ### (1)
-def vaildate_Keyword(chunkContent: str, wordlist: KeywordsList) => float:
+def vaildate_Keyword(chunkContent: Sentence, wordlist: KeywordsList) => float:
 	# if chunkContent in wordlist : +{...} * Env.weights.Keyword
 	# else: +0
 
-def vaildate_KeywordsMass(chunkContent: str, wordlist: KeywordsList) => float:
+def vaildate_KeywordsMass(chunkContent: Sentence, wordlist: KeywordsList) => float:
 	# if count of chunkContent in wordlist} > {1}: -{...} * Env.weights.KeywordsMass
 	# else: -0
 	
 ### (2)
-def vaildate_NEWword(chunkContent: str, wordlist: KeywordsList) => float:
+def vaildate_NEWword(chunkContent: Sentence, wordlist: KeywordsList) => float:
 	# if chunkContent not in wordlist : +{...} * Env.weights.NEWword
 	# else: +0
 
-def vaildate_NEWwordsMass(chunkContent: str, wordlist: KeywordsList) => float:
+def vaildate_NEWwordsMass(chunkContent: Sentence, wordlist: KeywordsList) => float:
 	# if count of chunkContent not in wordlist} > {1}: -{...} * Env.weights.NEWwordMass
 	# else: -0
 
 
 
 ### (3)
-POS   = NewType("POS", str)
-POSList = NewType("POSList", Set[POS])
-POSHeadTailList = NewType("POSHeadTailList", Set[POS])
-POSConnectSuitList = NewType("POSConnectSuitList", List[tuple[POS,POS]])
-ChunkPos = NewType("ChunkPos", List[POS]) 
+
 
 def vaildate_POS(chunkPos: list[POS], posList: POSList) => float:
 	# if chunkPos in posList : +{...} * Env.weights.POS
@@ -175,16 +184,29 @@ def vaildate_POSHeadTail(chunkPos: ChunkPos, posHeadTailList: POSHeadTailList) =
 
 
 ### (4)
-POSContainSuit = NewType("POSContainSuit", Set[POS,POS])
-POSContainSuitPoint = NewType("POSContainSuitPoint", int)
-POSContainSuitList = NewType("POSContainSuitList", List[tuple[POSContainSuit,POSContainSuitPoint]])
 
-def vaildate_SentCompleted(chunkPos: ChunkPos, posSuitList: POSContainSuitList) => float:
-	# if element of posSuitList.POSContainSuit in chunkPos : 
-	#	+{posSuitList.POSContainSuitPoint} * Env.weights.SentCompleted
+
+def vaildate_SentCompleted(chunkPos: ChunkPos, posSuitList: POSExpertSuitList) => float:
+	# if element of posSuitList.POSExpertSuit in chunkPos : 
+	#	+{posSuitList.POSExpertSuitPoint} * Env.weights.SentCompleted
 	# else: +0
 
-def vaildate_SentLength(chunkContent: str) => float:
+def vaildate_SentLength(chunkContent: Sentence) => float:
 	# if 5 > length of chunkContent in wordlist} > 3: +{...} * Env.weights.SentLength
 	# else: +0
+	
+	
+```
+
+### DataProcess
+```python
+
+def getPosOfSentence(sentence: Sentence) => List[POS]:
+	pass
+
+def getScoreOfChunkSentence(preSentence: Sentence, targetSentence:Sentence: Sentence) => float:
+	# preSentencePos:List[POS] = getPosOfSentence(preSentence)
+	# 
+	
+	pass
 ```
