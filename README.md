@@ -30,18 +30,17 @@ Chunking is a procedure of breaking up reading material into manageable sections
 
 
 ### Machine Vaildate Rule Plan
-|  id    |  Category    |  shortname      |  bias |  baselines                       |
-| :----: | ----         | ----            | :----:| ----                             |
-| 1      |  1.KEYWORDS  | Keyword         | +     | contain a keyword                |
-| 2      |  1.KEYWORDS  | Keywords Mass   | -     | contain too many keywords        |
-| 3      |  2.NEWWORDS  | NEWword         | +     | contain a new word               |
-| 4      |  2.NEWWORDS  | NEWwords Mass   | -     | contain too many new-words       |
-| 5      |  3.POS TAGS  | POS             | +     | contain experts POS              |
-| 6      |  3.POS TAGS  | POSMass         | -     | contain too many experts POSs    |
-| 7      |  3.POS TAGS  | POSBetween      | +     | Between two POS                  |
-| 8      |  3.POS TAGS  | POSHeadTail     | +     | start or end with experts POS    | 
-| 9      |  4.Sentence  | SentCompleted   | +     | contain experts POS suit         | 
-| 10     |  4.Sentence  | SentLength      | +     | vaildate with length of sentencs | 
+|  id    |  Category    |  shortname      |  bias  |  baselines                       |
+| :----: | ----         | ----            | :----: | ----                             |
+| 1      |  1.KEYWORDS  | Keyword         | -1     | contain a keyword                |
+| 2      |  1.KEYWORDS  | Keywords Mass   | -1     | contain too many keywords        |
+| 3      |  2.NEWWORDS  | NEWword         | -1     | contain a new word               |
+| 4      |  2.NEWWORDS  | NEWwords Mass   | -1     | contain too many new-words       |
+| 5      |  3.POS TAGS  | POS             | -1     | contain experts POS              |
+| 6      |  3.POS TAGS  | POSMass         | -1     | contain too many experts POSs    |
+| 7      |  3.POS TAGS  | POSHeadTail     | -1     | start or end with experts POS    | 
+| 8      |  3.POS TAGS  | SentCompleted   | -1     | contain experts POS suit         | 
+| 9      |  4.Sentence  | SentLength      | -1     | vaildate with length of sentencs | 
 
 ## Reference
 
@@ -107,8 +106,9 @@ Chunking is a procedure of breaking up reading material into manageable sections
 
 ### Variable
 ``` python
+## Set Varibles as Arguments to adjust score
 class Weights(TypedDict):
-	Keyword: float,
+	KeywordNone: float,
 	KeywordsMass: float,
 	NEWword: float,
 	NEWwordMass: float,
@@ -117,83 +117,69 @@ class Weights(TypedDict):
 	POSBetween: float,
 	POSHead: float,
 	POSTail: float,
+	POSCombo: float,
 	SentLength: float,
-	SentCompleted: float,
+
+	
+	
+	
+class Condition(TypedDict):
+	KeywordMaxNum: float,
+	NewwordMaxNum: float,
+	StrongPosMaxNum: float,
 
 class Env(TypedDict):
 	weights: Weights
+	condition: Condition
 
-Sentence = NewType("Sentence", str)
-KeywordsList = NewType("KeywordsList", Dict[str, int])
-POS   = NewType("POS", str)
-POSList = NewType("POSList", Set[POS])
-POSHeadTailList = NewType("POSHeadTailList", Set[POS])
-POSConnectSuitList = NewType("POSConnectSuitList", List[tuple[POS,POS]])
-ChunkPos = NewType("ChunkPos", List[POS]) 
-POSExpertSuit = NewType("POSExpertSuit", Set[POS,POS])
-POSExpertSuitPoint = NewType("POSExpertSuitPoint", int)
-POSExpertSuitList = NewType("POSExpertSuitList", List[tuple[POSExpertSuit,POSExpertSuitPoint]])
+Sentence = str
+KeywordsList = Dict[str, int]
+POS   = str
+WORD = str
+ExpertPOSList = Set[POS]
+POSHeadTailList = Set[POS]
+ChunkPos = List[POS]
+ChunkWord = List[WORD]
+POSCombo = List[tuple[POS,POS]]
 
 ```
+### Initail vaildate standard
+```
+strongPosList: ExpertPOSList = []
+keywordsList: KeywordsList = {}
+posCombo: POSCombo = []
+posSuitList: ExpertPOSList = []
+def pullKeywordsList() => KeywordsList: ...
+
+```
+
 ### Validate
 ```python
-def pullKeywordsList() => KeywordsList:
-	pass
 
-### (1)
-def vaildate_Keyword(chunkContent: Sentence, wordlist: KeywordsList) => float:
-	# if chunkContent in wordlist : +{...} * Env.weights.Keyword
-	# else: +0
 
-def vaildate_KeywordsMass(chunkContent: Sentence, wordlist: KeywordsList) => float:
-	# if count of chunkContent in wordlist} > {1}: -{...} * Env.weights.KeywordsMass
-	# else: -0
+### (1) vaildate by word weight 
+def vaildate_Keyword(chunkWord: ChunkWord, wordlist: KeywordsList) => float: ...
+	# if all word of chunkWord not in wordlist : -1 * Env.weights.KeywordNone
+	# if count of chunkWord in wordlist} > Env.condition.KeywordMaxNum : -1 * Env.weights.KeywordsMass
 	
-### (2)
-def vaildate_NEWword(chunkContent: Sentence, wordlist: KeywordsList) => float:
-	# if chunkContent not in wordlist : +{...} * Env.weights.NEWword
-	# else: +0
-
-def vaildate_NEWwordsMass(chunkContent: Sentence, wordlist: KeywordsList) => float:
-	# if count of chunkContent not in wordlist} > {1}: -{...} * Env.weights.NEWwordMass
-	# else: -0
+### (2) vaildate by new word weight 
+def vaildate_NEWword(chunkWord: ChunkWord, wordlist: KeywordsList) => float:
+	# if all of chunkWord's word in the wordlist : - 1 * Env.weights.NEWword
+	# if count of chunkWord not in wordlist > Env.condition.NewwordMaxNum : - 1 * Env.weights.NEWwordMass
 
 
+### (3) vaildate by expert's strong pos dataset (**strong pos = important pos)
+def vaildate_POS(chunkPos: list[POS], strongPosList: ExpertPOSList, posCombo: POSCombo) => float: ...
+	# if all unit of chunkPos not in strongPosList : -1 * Env.weights.POS
+	# if count of chunkPos in strongPosList > Env.condition.StrongPosMaxNum: -1 * Env.weights.POSMass
+	# if chunkPos.head not in strongPosList: -1 * Env.weights.POSHead
+	# if chunkPos.tail not in strongPosList: -1 * Env.weights.POSTail
+	# if combo of posCombo not in chunkPos: -1 * Env.weights.POSCombo
 
-### (3)
-
-
-def vaildate_POS(chunkPos: list[POS], posList: POSList) => float:
-	# if chunkPos in posList : +{...} * Env.weights.POS
-	# else: +0
-
-def vaildate_POSMass(chunkPos: list[POS], posList: POSList) => float:
-	# if count of chunkPos in posList} > {1}: -{...} * Env.weights.POSMass
-	# else: -0
-
-def vaildate_POSBetween(chunkPos: ChunkPos, beforeChunkPos: ChunkPos, posSuitList: POSConnectSuitList) => float:
-	# if (beforeChunkPos.tail, chunkPos.head) in posSuitList: +{...} * Env.weights.POSBetween
-	# else: +0
-	
-def vaildate_POSHeadTail(chunkPos: ChunkPos, posHeadTailList: POSHeadTailList) => float:
-	# if chunkPos.head in posHeadTailList: +{...} * Env.weights.POSHead
-	# else: +0
-	# if chunkPos.tail in posHeadTailList: +{...} * Env.weights.POSTail
-	# else: +0
-
-
-
-### (4)
-
-
-def vaildate_SentCompleted(chunkPos: ChunkPos, posSuitList: POSExpertSuitList) => float:
-	# if element of posSuitList.POSExpertSuit in chunkPos : 
-	#	+{posSuitList.POSExpertSuitPoint} * Env.weights.SentCompleted
-	# else: +0
-
-def vaildate_SentLength(chunkContent: Sentence) => float:
-	# if 5 > length of chunkContent in wordlist} > 3: +{...} * Env.weights.SentLength
-	# else: +0
+### (4) vaildate by sentence status
+def vaildate_SentCompleted(chunkPos: ChunkPos, posSuitList: ExpertPOSList) => float: ...
+	# if length of chunkPos in wordlist < 3: -1 * Env.weights.SentLength
+	# if length of chunkPos in wordlist > 5: -1 * Env.weights.SentLength
 	
 	
 ```
@@ -201,12 +187,60 @@ def vaildate_SentLength(chunkContent: Sentence) => float:
 ### DataProcess
 ```python
 
-def getPosOfSentence(sentence: Sentence) => List[POS]:
-	pass
-
-def getScoreOfChunkSentence(preSentence: Sentence, targetSentence:Sentence: Sentence) => float:
-	# preSentencePos:List[POS] = getPosOfSentence(preSentence)
-	# 
+class SPack(TypedDict): 
+	source: Sentence
+	words: ChunkWord
+	poss: ChunkPos
+	prefix: str
+	score: float
 	
-	pass
+def pullSentences() => List[Sentence]: ...	
+
+def cutSentence(source: Sentence) -> Tuple[ChunkWord, ChunkPos]: ...
+
+def buildSPack(source: Sentence) -> SPack: ...
+
+def calculateScore(words: ChunkWord, poss: ChunkPos)-> float: ...
+
+def findBestSPack(SPUs: List[SPack]) -> SPack: ...
+
+def findbestcombo(words: [str], poss: [str]) -> List[Tuple[str, float]]:
+    def getScore(ts: [str], ps: [str]):
+        # TODO: Calculate score with argus
+        return 1.0
+
+    def head(arr: [str], arrPos: [str], keeplabel= "", ans= [], score=0):
+        # 1. build prefix from head of arr.
+        # 2. build tail from arr beside head
+        # 3. get score with new prefix and pos of that
+        # 4. update keeplabel (**keep label is result of last turn)
+        #
+        # if tail is empty
+        #   it's mean that should return the final combo and score (new prefix + current score)
+        # if not
+        #   go to next round with 
+        #     1. tail (without process in this round) as the base array 
+        #     2. new keeplabel (calculate score is done) as keeplabel
+        #     3. new prefix + current score as base-score
+        # TODO: Early Stop
+        # make getscore always minus
+        # build and transfer a argu as the best answer
+        # if current score is lower then the best answer, stop it
+
+        for i in range(len(arr)):
+            prefix = arr[:i+1]
+            prefixPoss = arrPos[:i+1]
+            tail = arr[i+1:]
+            tailPoss = arrPos[:i+1]
+            prefixLabel = "".join(prefix)
+            prefixLabelScore = getScore(prefix, prefixPoss)
+            newheadlabel = f"{keeplabel}/{prefixLabel}"
+            if len(tail) ==0:
+                return ans + [(newheadlabel, score+prefixLabelScore)] 
+            ans = head(tail, tailPoss, newheadlabel, ans, score+prefixLabelScore)
+    
+    return head(words,poss)[0]    
+        
+
+	
 ```
